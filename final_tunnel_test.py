@@ -100,9 +100,9 @@ for x in floor_x_positions:
 # 1.εξωτερικός χώρος-κύβος (max area 5.0)
 plc_2d.addRegionMarker([0, 25], marker=1, area=5.0)
 
-# 2.ενδιάμεσος χώρος-πλέγμα (max area 0.05)
+# 2.ενδιάμεσος χώρος-πλέγμα (max area 0.20)
 # είναι ο χώρος από την οροφή του τούνελ(3) ως την οροφή του δευτερου ημικυκλίου που φτιάξαμε (4.5)
-plc_2d.addRegionMarker([0, 3.75], marker=2, area=0.05)
+plc_2d.addRegionMarker([0, 3.75], marker=2, area=0.20)
 
 # 3. ανωμαλία υπεδάφους (max area 0.2)
 plc_2d.addRegionMarker([0, anom_top - 1.5], marker=3, area=0.2)
@@ -118,10 +118,10 @@ mesh_2d = mt.createMesh(plc_2d, quality=34.0)
 plc_2d.exportVTK("plc_2d.vtk")  
 mesh_2d.exportVTK("mesh_2d.vtk")
 
-# δημιουργώ πιο μικρές θέσεις γύρω από τα ηλεκτρόδια ώστε να έχω μεγαλύτερη ανάλυση γύρω από αυτά 
+# δημιουργώ παχύτερες θέσεις γύρω από τα ηλεκτρόδια ώστε το πλέγμα να μην είναι υπερβολικά λεπτό
 refined_z_slices = []
 for z in floor_z_positions:
-    refined_z_slices.extend([z - 0.2, z, z + 0.2])
+    refined_z_slices.extend([z - 0.5, z, z + 0.5])
 
 # οριοθετούμε ακριβώς την ανωμαλία στον Ζ άξονα γιατί αλλιώς θα βγει 3*3*50
 # θα είναι 3x3x3m κύβος στο κέντρο του τούνελ (Z = 25)
