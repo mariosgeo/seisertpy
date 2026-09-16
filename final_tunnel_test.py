@@ -82,6 +82,10 @@ plc_2d = domain_2d + ref_shell_2d + tunnel_2d + anomaly_2d
 
 
 
+# Επιλογές Πλέγματος (Mesh Settings)
+refine_electrodes = False  # True: Προσθέτει λεπτές φέτες (z +- 0.2m) γύρω από κάθε ηλεκτρόδιο
+                          # False: Χρησιμοποιεί μόνο τις ακριβείς θέσεις των ηλεκτροδίων (πιο ελαφρύ πλέγμα)
+
 # --- 1mm Safe Shift ---
 # Μετατοπίζουμε τα ηλεκτρόδια 1mm μέσα στο πέτρωμα (προς τα κάτω στον άξονα Y)
 # ώστε οι κόμβοι να μην βρίσκονται ακριβώς πάνω στο ανοιχτό όριο του κενού (hole).
@@ -96,16 +100,16 @@ safe_floor_y = floor_y - shift
 for x in floor_x_positions:
     plc_2d.createNode([x, safe_floor_y])
 
-# διαχωρίζω τα σημεία ωστε να ορίσω σε αυτά την ποιότητα του πλέγματος που θέλω 
-# 1.εξωτερικός χώρος-κύβος (max area 5.0)
-plc_2d.addRegionMarker([0, 25], marker=1, area=5.0)
+# διαχωρίζω τα σημεία ώστε να ορίσω σε αυτά την ποιότητα του πλέγματος (Coarser settings)
+# 1. εξωτερικός χώρος-κύβος (max area 30.0)
+plc_2d.addRegionMarker([0, 25], marker=1, area=30.0)
 
-# 2.ενδιάμεσος χώρος-πλέγμα (max area 0.20)
+# 2.ενδιάμεσος χώρος-πλέγμα (max area 0.05)
 # είναι ο χώρος από την οροφή του τούνελ(3) ως την οροφή του δευτερου ημικυκλίου που φτιάξαμε (4.5)
-plc_2d.addRegionMarker([0, 3.75], marker=2, area=0.20)
+plc_2d.addRegionMarker([0, 3.75], marker=2, area=0.05)
 
-# 3. ανωμαλία υπεδάφους (max area 0.2)
-plc_2d.addRegionMarker([0, anom_top - 1.5], marker=3, area=0.2)
+# 3. ανωμαλία υπεδάφους (max area 1.0)
+plc_2d.addRegionMarker([0, anom_top - 1.5], marker=3, area=1.0)
 
 # Ορίζουμε το εσωτερικό του τούνελ ως κενό/τρύπα (σε 2D συντεταγμένες).
 # Έτσι δεν θα γεμίσει με πλέγμα αυτή η περιοχή.
@@ -113,24 +117,23 @@ plc_2d.addHoleMarker([0, 1.0])
 
 # Δημιουργία του 2D πλέγματος
 print("Generating 2D cross-section with anomaly...")
-mesh_2d = mt.createMesh(plc_2d, quality=34.0)
+mesh_2d = mt.createMesh(plc_2d, quality=33.0)
 
 plc_2d.exportVTK("plc_2d.vtk")  
 mesh_2d.exportVTK("mesh_2d.vtk")
 
-# δημιουργώ παχύτερες θέσεις γύρω από τα ηλεκτρόδια ώστε το πλέγμα να μην είναι υπερβολικά λεπτό
+# δημιουργώ πιο μικρές θέσεις γύρω από τα ηλεκτρόδια ώστε να έχω μεγαλύτερη ανάλυση γύρω από αυτά 
 refined_z_slices = []
 for z in floor_z_positions:
-    refined_z_slices.extend([z - 0.5, z, z + 0.5])
+    refined_z_slices.extend([z - 0.2, z, z + 0.2])
 
-# οριοθετούμε ακριβώς την ανωμαλία στον Ζ άξονα γιατί αλλιώς θα βγει 3*3*50
-# θα είναι 3x3x3m κύβος στο κέντρο του τούνελ (Z = 25)
+# οριοθετούμε ακριβώς την ανωμαλία στον Ζ άξονα (3x3x3m κύβος στο Z = 25)
 anomaly_z_start = 23.5
 anomaly_z_end = 26.5
 
-# δημιουργώ 25 βασικές θέσεις κατά μήκος του τούνελ 
-base_z_slices = np.linspace(0, tunnel_length, 25)
-# ενώνω τις βασικές με τις πιο μικρές θέσεις που έφτιαξα
+# βασικές θέσεις κατά μήκος του τούνελ (πιο αραιές για εξοικονόμηση μνήμης)
+base_z_slices = np.linspace(0, tunnel_length, 11)
+# ενώνω τις βασικές με τις θέσεις ηλεκτροδίων και ανωμαλίας
 all_z_targets = np.concatenate((base_z_slices, refined_z_slices, [anomaly_z_start, anomaly_z_end]))
 
 # σορτάρω τις θέσεις αυτές και σβήνω τυχόν κοινές θέσεις. βεβαιώνομαι ότι όλες οι θέσεις είναι εντός του τούνελ (από 0 ως 50)
@@ -142,7 +145,6 @@ print("Extruding 3D mesh... This might take a moment.")
 mesh_3d = mt.extrudeMesh(mesh_2d, a=z_slices)
 
 # οριοθέτηση της ανωμαλίας
-# προσέχουμε που βρίσκεται το κέντρο των κελιών της ώστε να μην βγαίνει έξω από τα όρια που έχω ορίσει
 print("Localizing the anomaly volume...")
 for cell in mesh_3d.cells():
     if cell.marker() == 3:
@@ -213,20 +215,20 @@ data = ert.simulate(
 data.markInvalid(data("rhoa") <= 0)
 data.removeInvalid()
 print(f"Simulation success! Usable data points: {data.size()}")
-
+data.save('forward.dat')
 # ==========================================
 # 5. INVERSION
 # ==========================================
-print("Preparing Inversion Mesh...")
-inv_mesh = pg.Mesh(mesh_3d)
+#print("Preparing Inversion Mesh...")
+#inv_mesh = pg.Mesh(mesh_3d)
 
-for cell in inv_mesh.cells():
-    if cell.marker() == 3:
-        cell.setMarker(2)
+#for cell in inv_mesh.cells():
+#    if cell.marker() == 3:
+#        cell.setMarker(2)
 
-print("Starting 3D Inversion... Monitor your computer's RAM usage!")
-mgr = ert.ERTManager()
-inv_res = mgr.invert(data, mesh=inv_mesh, lam=20, verbose=True)
+#print("Starting 3D Inversion... Monitor your computer's RAM usage!")
+#mgr = ert.ERTManager()
+#inv_res = mgr.invert(data, mesh=inv_mesh, lam=20, verbose=True)
 
-inv_mesh.exportVTK("final_inverted_tunnel.vtk")
-print("All done!")
+#inv_mesh.exportVTK("final_inverted_tunnel.vtk")
+#print("All done!")
