@@ -30,6 +30,9 @@ This project focuses on simulating and resolving subsurface anomalies (e.g., fau
 ```text
 seisertpy/
 ├── make_mesh_v2.ipynb                # Main Jupyter Notebook (mesh, simulation & inversion)
+├── final_tunnel_test.py              # Standalone Python script for full tunnel ERT simulation & inversion
+├── tunnel_test_6_greek.py            # Mesh construction and geometry definition script with detailed annotations
+├── test2.py                          # Lightweight 3D mesh and inversion test script (low-RAM)
 ├── horseshoe_tunnel_floor_only.vtk   # Exported 3D tunnel prism mesh (VTK format)
 ├── simulated_ert_floor_only.dat      # Synthetic apparent resistivity dataset (PyGIMLi format)
 ├── .gitignore                        # Standard Git exclusions for Python / Jupyter
