@@ -24,3 +24,5 @@ Thumbs.db
 
 # Large output files / caches (optional, keep dat/vtk tracked if explicitly needed)
 *.log
+*.vtk
+*.dat
